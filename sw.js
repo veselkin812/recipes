@@ -1,9 +1,10 @@
-const CACHE_NAME = 'ravnodushnye-k-ede-v1';
+const CACHE_NAME = 'ravnodushnye-k-ede-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './bg.jpg',
+  './splash.png',
   './icon-192.png',
   './icon-512.png'
 ];
@@ -52,7 +53,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Для статики (bg.jpg, manifest.json, иконки) — кэш с обновлением из сети
+  // Для статики (bg.jpg, splash.png, manifest.json, иконки) — кэш с обновлением из сети
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
