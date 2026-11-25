@@ -1141,7 +1141,7 @@
     const encodedSubject = encodeURIComponent(`Рецепт: ${recipe.title}`);
 
     shareRecipeSubtitle.textContent = recipe.title;
-    shareTelegramLink.href = `https://t.me/share/url?url=&text=${encodedText}`;
+    shareTelegramLink.href = `tg://msg?text=${encodedText}`;
     shareWhatsappLink.href = `https://wa.me/?text=${encodedText}`;
     shareSmsLink.href = `sms:?body=${encodedText}`;
     shareEmailLink.href = `mailto:?subject=${encodedSubject}&body=${encodedText}`;
