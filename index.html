@@ -318,6 +318,7 @@
     }
 
     input[type="text"],
+    input[type="password"],
     select,
     textarea {
       width: 100%;
@@ -331,6 +332,7 @@
     }
 
     input[type="text"]:focus,
+    input[type="password"]:focus,
     select:focus,
     textarea:focus {
       outline: none;
@@ -385,7 +387,7 @@
       border-radius: 10px;
     }
 
-    /* Строка поиска + кнопка добавления + статус облака */
+    /* Строка поиска + кнопка добавления + статус облака + замок */
     .toolbar-row {
       display: flex;
       align-items: center;
@@ -432,6 +434,29 @@
 
     .sync-badge:hover {
       background: var(--berry-soft);
+    }
+
+    .lock-badge {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--plum);
+      border-radius: 50%;
+      font-size: 0.95rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(91, 35, 67, 0.05);
+      transition: background 0.18s, transform 0.14s;
+    }
+
+    .lock-badge:hover {
+      background: var(--berry-soft);
+      transform: translateY(-1px);
     }
 
     /* Сетка карточек */
@@ -560,8 +585,8 @@
       border: 1.5px dashed #d4b8c6;
     }
 
-    /* Модальное окно выбора приложения для отправки */
-    .share-backdrop {
+    /* Модальные окна (поделиться и ввод пароля) */
+    .modal-backdrop {
       position: fixed;
       inset: 0;
       z-index: 9000;
@@ -573,11 +598,11 @@
       padding: 20px;
     }
 
-    .share-backdrop.open {
+    .modal-backdrop.open {
       display: flex;
     }
 
-    .share-modal {
+    .modal-card {
       width: 100%;
       max-width: 380px;
       background: rgba(255, 252, 249, 0.98);
@@ -587,7 +612,7 @@
       box-shadow: 0 18px 40px rgba(91, 35, 67, 0.25);
     }
 
-    .share-modal-header {
+    .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -595,14 +620,14 @@
       margin-bottom: 6px;
     }
 
-    .share-modal-title {
+    .modal-title {
       margin: 0;
       font-size: 1.12rem;
       font-weight: 800;
       color: var(--plum);
     }
 
-    .share-close-btn {
+    .modal-close-btn {
       width: 32px;
       height: 32px;
       border-radius: 50%;
@@ -617,11 +642,19 @@
       justify-content: center;
     }
 
-    .share-recipe-subtitle {
+    .modal-subtitle {
       margin: 0 0 16px;
       font-size: 0.9rem;
       color: var(--muted);
       font-weight: 600;
+    }
+
+    .pin-error-text {
+      color: var(--danger);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 8px 0 0;
+      min-height: 1.2em;
     }
 
     .share-options-grid {
@@ -819,6 +852,7 @@
         </div>
         <button type="button" class="btn" id="toggleFormBtn">+ Добавить рецепт</button>
         <button type="button" class="sync-badge" id="syncBadge" title="Нажмите, чтобы обновить из облака">⏳ Проверка облака...</button>
+        <button type="button" class="lock-badge" id="lockBadge" title="Семейный пароль" aria-label="Семейный пароль">🔒</button>
       </div>
 
       <div id="recipesContainer" class="recipes-grid"></div>
@@ -827,13 +861,13 @@
 </div>
 
 <!-- Меню выбора приложения для отправки рецепта -->
-<div class="share-backdrop" id="shareBackdrop" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
-  <div class="share-modal">
-    <div class="share-modal-header">
-      <h3 class="share-modal-title" id="shareModalTitle">Поделиться рецептом</h3>
-      <button type="button" class="share-close-btn" id="shareCloseBtn" aria-label="Закрыть">×</button>
+<div class="modal-backdrop" id="shareBackdrop" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title" id="shareModalTitle">Поделиться рецептом</h3>
+      <button type="button" class="modal-close-btn" id="shareCloseBtn" aria-label="Закрыть">×</button>
     </div>
-    <p class="share-recipe-subtitle" id="shareRecipeSubtitle"></p>
+    <p class="modal-subtitle" id="shareRecipeSubtitle"></p>
 
     <div class="share-options-grid">
       <a class="share-option-btn" id="shareTelegramLink" href="#" target="_blank" rel="noopener">
@@ -883,6 +917,23 @@
   </div>
 </div>
 
+<!-- Окно ввода семейного пароля для редактирования -->
+<div class="modal-backdrop" id="pinBackdrop" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+  <form class="modal-card" id="pinForm">
+    <div class="modal-header">
+      <h3 class="modal-title" id="pinModalTitle">Семейный пароль</h3>
+      <button type="button" class="modal-close-btn" id="pinCloseBtn" aria-label="Закрыть">×</button>
+    </div>
+    <p class="modal-subtitle">Просмотр открыт всем, а для добавления и изменения рецептов нужен семейный код.</p>
+    <input type="password" id="pinInput" placeholder="Введите семейный пароль..." autocomplete="current-password" required>
+    <p class="pin-error-text" id="pinErrorText"></p>
+    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+      <button type="button" class="btn btn-secondary" id="pinCancelBtn">Отмена</button>
+      <button type="submit" class="btn">Подтвердить</button>
+    </div>
+  </form>
+</div>
+
 <script>
   // Скрываем стартовую заставку ровно через 2 секунды
   window.addEventListener('DOMContentLoaded', () => {
@@ -900,6 +951,10 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_KkIGdmp4EipvWJjJkJQ45Q_wIuDkUfq'.trim();
   // =====================================
 
+  const PIN_STORAGE_KEY = 'family_recipes_pin';
+  let familyPin = localStorage.getItem(PIN_STORAGE_KEY) || '';
+  let pendingProtectedAction = null;
+
   const hasValidUrl =
     SUPABASE_URL.startsWith('https://') &&
     SUPABASE_URL.includes('.supabase.co');
@@ -910,9 +965,13 @@
 
   const hasLibrary = Boolean(window.supabase && window.supabase.createClient);
 
-  const db = (hasValidUrl && hasValidKey && hasLibrary)
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+  function getDbClient() {
+    if (!hasValidUrl || !hasValidKey || !hasLibrary) return null;
+    const headers = familyPin ? { 'x-family-pin': familyPin } : {};
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers }
+    });
+  }
 
   const CATEGORIES = [
     'Завтрак',
@@ -953,6 +1012,7 @@
   const currentPhotoBox = document.getElementById('currentPhotoBox');
   const currentPhotoPreview = document.getElementById('currentPhotoPreview');
   const syncBadge = document.getElementById('syncBadge');
+  const lockBadge = document.getElementById('lockBadge');
 
   const shareBackdrop = document.getElementById('shareBackdrop');
   const shareCloseBtn = document.getElementById('shareCloseBtn');
@@ -962,6 +1022,109 @@
   const shareSmsLink = document.getElementById('shareSmsLink');
   const shareEmailLink = document.getElementById('shareEmailLink');
   const shareCopyBtn = document.getElementById('shareCopyBtn');
+
+  const pinBackdrop = document.getElementById('pinBackdrop');
+  const pinForm = document.getElementById('pinForm');
+  const pinInput = document.getElementById('pinInput');
+  const pinErrorText = document.getElementById('pinErrorText');
+  const pinCloseBtn = document.getElementById('pinCloseBtn');
+  const pinCancelBtn = document.getElementById('pinCancelBtn');
+
+  function updateLockButton() {
+    if (familyPin) {
+      lockBadge.textContent = '🔓';
+      lockBadge.title = 'Семейный пароль сохранён — нажмите, чтобы сбросить';
+      lockBadge.setAttribute('aria-label', 'Сбросить семейный пароль');
+    } else {
+      lockBadge.textContent = '🔒';
+      lockBadge.title = 'Введите семейный пароль для редактирования';
+      lockBadge.setAttribute('aria-label', 'Ввести семейный пароль');
+    }
+  }
+
+  function resetFormState() {
+    editingId = null;
+    form.reset();
+    categorySelect.value = '';
+    categorySecondarySelect.value = '';
+    formTitle.textContent = 'Новый рецепт';
+    submitBtn.textContent = 'Сохранить рецепт';
+    submitBtn.disabled = false;
+    fileNameLabel.textContent = 'Файл не выбран';
+    currentPhotoBox.classList.remove('active');
+    currentPhotoPreview.src = '';
+    form.classList.remove('active');
+  }
+
+  function clearSavedPin() {
+    familyPin = '';
+    localStorage.removeItem(PIN_STORAGE_KEY);
+    resetFormState();
+    updateLockButton();
+  }
+
+  lockBadge.addEventListener('click', () => {
+    if (familyPin) {
+      clearSavedPin();
+    } else {
+      openPinModal(null);
+    }
+  });
+
+  function openPinModal(actionCallback, errorMsg = '') {
+    pendingProtectedAction = actionCallback;
+    pinErrorText.textContent = errorMsg;
+    pinInput.value = '';
+    pinBackdrop.classList.add('open');
+    setTimeout(() => pinInput.focus(), 50);
+  }
+
+  function closePinModal() {
+    pinBackdrop.classList.remove('open');
+    pendingProtectedAction = null;
+    pinErrorText.textContent = '';
+  }
+
+  function requirePin(actionCallback) {
+    if (familyPin) {
+      actionCallback();
+    } else {
+      openPinModal(actionCallback);
+    }
+  }
+
+  pinCloseBtn.addEventListener('click', closePinModal);
+  pinCancelBtn.addEventListener('click', closePinModal);
+  pinBackdrop.addEventListener('click', (e) => {
+    if (e.target === pinBackdrop) closePinModal();
+  });
+
+  pinForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const entered = pinInput.value.trim();
+    if (!entered) return;
+    familyPin = entered;
+    localStorage.setItem(PIN_STORAGE_KEY, familyPin);
+    updateLockButton();
+    const nextAction = pendingProtectedAction;
+    closePinModal();
+    if (typeof nextAction === 'function') {
+      nextAction();
+    }
+  });
+
+  function isAuthError(error) {
+    if (!error) return false;
+    const msg = `${error.message || ''} ${error.code || ''}`.toLowerCase();
+    return error.code === '42501' || msg.includes('row-level security') || msg.includes('permission denied');
+  }
+
+  function handleAuthFailure(retryCallback) {
+    clearSavedPin();
+    setSyncStatus('🔒 Неверный пароль');
+    syncFromCloud();
+    openPinModal(retryCallback, 'Неверный семейный пароль. Попробуйте ещё раз.');
+  }
 
   function setSyncStatus(text) {
     syncBadge.textContent = text;
@@ -986,6 +1149,7 @@
   }
 
   async function syncFromCloud() {
+    const db = getDbClient();
     if (!db) {
       if (!hasValidUrl) setSyncStatus('⚙️ Проверьте SUPABASE_URL');
       else if (!hasValidKey) setSyncStatus('⚙️ Проверьте SUPABASE_ANON_KEY');
@@ -1001,14 +1165,6 @@
         .order('id', { ascending: false });
 
       if (error) throw error;
-
-      if (data.length === 0 && recipes.length > 0) {
-        const { error: uploadError } = await db.from('recipes').insert(recipes);
-        if (!uploadError) {
-          setSyncStatus('☁️ Синхронизировано');
-          return;
-        }
-      }
 
       recipes = data;
       saveToLocalCache();
@@ -1044,20 +1200,6 @@
     });
   }
 
-  function resetFormState() {
-    editingId = null;
-    form.reset();
-    categorySelect.value = '';
-    categorySecondarySelect.value = '';
-    formTitle.textContent = 'Новый рецепт';
-    submitBtn.textContent = 'Сохранить рецепт';
-    submitBtn.disabled = false;
-    fileNameLabel.textContent = 'Файл не выбран';
-    currentPhotoBox.classList.remove('active');
-    currentPhotoPreview.src = '';
-    form.classList.remove('active');
-  }
-
   choosePhotoBtn.addEventListener('click', () => {
     photoInput.click();
   });
@@ -1068,46 +1210,50 @@
   });
 
   toggleFormBtn.addEventListener('click', () => {
-    const wasEditing = editingId !== null;
-    const isOpen = form.classList.contains('active');
-    resetFormState();
-    if (!isOpen || wasEditing) {
-      form.classList.add('active');
-      document.getElementById('title').focus();
-    }
+    requirePin(() => {
+      const wasEditing = editingId !== null;
+      const isOpen = form.classList.contains('active');
+      resetFormState();
+      if (!isOpen || wasEditing) {
+        form.classList.add('active');
+        document.getElementById('title').focus();
+      }
+    });
   });
 
   cancelBtn.addEventListener('click', resetFormState);
 
   function startEditRecipe(id) {
-    const recipe = recipes.find(r => r.id === id);
-    if (!recipe) return;
+    requirePin(() => {
+      const recipe = recipes.find(r => r.id === id);
+      if (!recipe) return;
 
-    editingId = recipe.id;
-    formTitle.textContent = 'Редактирование рецепта';
-    submitBtn.textContent = 'Сохранить изменения';
+      editingId = recipe.id;
+      formTitle.textContent = 'Редактирование рецепта';
+      submitBtn.textContent = 'Сохранить изменения';
 
-    document.getElementById('title').value = recipe.title;
-    categorySelect.value = recipe.category || 'Прочее';
-    categorySecondarySelect.value = (recipe.category_secondary && recipe.category_secondary !== recipe.category)
-      ? recipe.category_secondary
-      : '';
-    document.getElementById('ingredients').value = recipe.ingredients;
-    document.getElementById('steps').value = recipe.steps;
+      document.getElementById('title').value = recipe.title;
+      categorySelect.value = recipe.category || 'Прочее';
+      categorySecondarySelect.value = (recipe.category_secondary && recipe.category_secondary !== recipe.category)
+        ? recipe.category_secondary
+        : '';
+      document.getElementById('ingredients').value = recipe.ingredients;
+      document.getElementById('steps').value = recipe.steps;
 
-    photoInput.value = '';
-    fileNameLabel.textContent = recipe.photo ? 'Текущее фото сохранено' : 'Файл не выбран';
+      photoInput.value = '';
+      fileNameLabel.textContent = recipe.photo ? 'Текущее фото сохранено' : 'Файл не выбран';
 
-    if (recipe.photo) {
-      currentPhotoPreview.src = recipe.photo;
-      currentPhotoBox.classList.add('active');
-    } else {
-      currentPhotoBox.classList.remove('active');
-      currentPhotoPreview.src = '';
-    }
+      if (recipe.photo) {
+        currentPhotoPreview.src = recipe.photo;
+        currentPhotoBox.classList.add('active');
+      } else {
+        currentPhotoBox.classList.remove('active');
+        currentPhotoPreview.src = '';
+      }
 
-    form.classList.add('active');
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      form.classList.add('active');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function toggleSteps(id) {
@@ -1160,8 +1306,9 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && shareBackdrop.classList.contains('open')) {
-      closeShareMenu();
+    if (e.key === 'Escape') {
+      if (shareBackdrop.classList.contains('open')) closeShareMenu();
+      if (pinBackdrop.classList.contains('open')) closePinModal();
     }
   });
 
@@ -1216,8 +1363,8 @@
     });
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  async function submitRecipeForm() {
+    const db = getDbClient();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Сохранение...';
 
@@ -1247,9 +1394,6 @@
           photo: updatedPhoto
         };
 
-        recipes[index] = updatedRecipe;
-        saveToLocalCache();
-
         if (db) {
           setSyncStatus('🔄 Сохранение в облако...');
           const { error } = await db
@@ -1264,8 +1408,18 @@
             })
             .eq('id', editingId);
 
+          if (isAuthError(error)) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Сохранить изменения';
+            handleAuthFailure(submitRecipeForm);
+            return;
+          }
+
           setSyncStatus(error ? '📴 Сохранено локально' : '☁️ Синхронизировано');
         }
+
+        recipes[index] = updatedRecipe;
+        saveToLocalCache();
       }
     } else {
       const photoData = await compressImage(photoFile);
@@ -1279,137 +1433,19 @@
         photo: photoData
       };
 
-      recipes.unshift(newRecipe);
-      saveToLocalCache();
-
       if (db) {
         setSyncStatus('🔄 Отправка в облако...');
         const { error } = await db.from('recipes').insert([newRecipe]);
+
+        if (isAuthError(error)) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Сохранить рецепт';
+          handleAuthFailure(submitRecipeForm);
+          return;
+        }
+
         setSyncStatus(error ? '📴 Сохранено локально' : '☁️ Синхронизировано');
       }
-    }
 
-    resetFormState();
-    renderRecipes(searchInput.value);
-  });
-
-  async function deleteRecipe(id) {
-    if (!confirm('Точно удалить этот рецепт?')) return;
-    recipes = recipes.filter(r => r.id !== id);
-    expandedStepsIds.delete(id);
-    if (editingId === id) {
-      resetFormState();
-    }
-    saveToLocalCache();
-    renderRecipes(searchInput.value);
-
-    if (db) {
-      setSyncStatus('🔄 Удаление из облака...');
-      const { error } = await db.from('recipes').delete().eq('id', id);
-      setSyncStatus(error ? '📴 Удалено локально' : '☁️ Синхронизировано');
-    }
-  }
-
-  function renderRecipes(filter = '') {
-    const query = filter.trim().toLowerCase();
-
-    const filtered = recipes.filter(r => {
-      const cats = getRecipeCategories(r);
-      const matchesCategory = selectedCategory === 'Все' || cats.includes(selectedCategory);
-      const matchesQuery =
-        !query ||
-        r.title.toLowerCase().includes(query) ||
-        r.ingredients.toLowerCase().includes(query) ||
-        cats.some(c => c.toLowerCase().includes(query));
-      return matchesCategory && matchesQuery;
-    });
-
-    if (filtered.length === 0) {
-      container.style.display = 'block';
-      const message = selectedCategory === 'Все'
-        ? 'Пока нет рецептов. Нажмите «+ Добавить рецепт», чтобы записать первый!'
-        : `В категории «${escapeHtml(selectedCategory)}» пока нет рецептов.`;
-      container.innerHTML = `<div class="empty-state">${message}</div>`;
-      return;
-    }
-
-    container.style.display = 'grid';
-    container.innerHTML = filtered.map(r => {
-      const cats = getRecipeCategories(r);
-      const isOpen = expandedStepsIds.has(r.id);
-      const tagsHtml = cats.map(c => `<span class="recipe-tag">#${escapeHtml(c)}</span>`).join('');
-
-      return `
-        <div class="recipe-card ${r.photo ? '' : 'no-photo'}">
-          <button type="button" class="btn btn-icon-round card-share-btn" onclick="openShareMenu(${r.id})" title="Поделиться рецептом" aria-label="Поделиться рецептом">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="18" cy="5" r="3"></circle>
-              <circle cx="6" cy="12" r="3"></circle>
-              <circle cx="18" cy="19" r="3"></circle>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-            </svg>
-          </button>
-          ${r.photo ? `<img src="${r.photo}" alt="${escapeAttr(r.title)}" class="recipe-img">` : ''}
-          <div class="recipe-body">
-            <h3 class="recipe-title">${escapeHtml(r.title)}</h3>
-            <div class="recipe-section-title">Ингредиенты</div>
-            <p class="recipe-text">${escapeHtml(r.ingredients)}</p>
-
-            <div class="steps-panel ${isOpen ? 'open' : ''}" id="steps-${r.id}">
-              <div class="recipe-section-title">Приготовление</div>
-              <p class="recipe-text">${escapeHtml(r.steps)}</p>
-            </div>
-
-            <div class="recipe-tags-row">${tagsHtml}</div>
-
-            <div class="recipe-footer">
-              <button type="button" class="btn btn-steps ${isOpen ? 'open' : ''}" onclick="toggleSteps(${r.id})">
-                ${isOpen ? 'Скрыть описание' : 'Описание действий'}
-              </button>
-              <button type="button" class="btn btn-icon-round" onclick="startEditRecipe(${r.id})" title="Редактировать рецепт" aria-label="Редактировать рецепт">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 20h9"></path>
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                </svg>
-              </button>
-              <button type="button" class="btn btn-danger" onclick="deleteRecipe(${r.id})">Удалить</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function escapeAttr(text) {
-    return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  searchInput.addEventListener('input', (e) => renderRecipes(e.target.value));
-
-  renderCategoryButtons();
-  renderRecipes();
-  syncFromCloud();
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
-        console.warn('Service Worker не зарегистрирован:', err);
-      });
-    });
-  }
-</script>
-
-</body>
-</html>
+      recipes.unshift(newRecipe);
+      saveToLocalCache
